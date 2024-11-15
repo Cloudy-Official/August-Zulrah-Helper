@@ -1,13 +1,16 @@
 import pygame
 import sys
 import os
+from pynput import keyboard
 
 pygame.init()
 
+# Default Window Dimensions
 width, height = 800, 600
 window = pygame.display.set_mode((width, height), pygame.RESIZABLE)
 pygame.display.set_caption("August RSPS Zulrah Helper")
 
+# Load image function with path handling for frozen executables
 def load_image(image_path, placeholder=None):
     if getattr(sys, 'frozen', False):  # Check if running as a bundled executable
         image_path = os.path.join(sys._MEIPASS, image_path)  # Access the bundled path
@@ -19,6 +22,7 @@ def load_image(image_path, placeholder=None):
             return placeholder
         return None
 
+# Placeholder for missing images
 placeholder_image = pygame.Surface((width, height))
 placeholder_image.fill((255, 0, 0))
 
@@ -45,16 +49,32 @@ patterns = {
 current_option = None
 current_pattern = 0
 
+# Hotkeys for options (Q, W, E, R, T, Y)
 hotkeys = {
-    pygame.K_F1: 1,
-    pygame.K_F2: 2,
-    pygame.K_F3: 3,
-    pygame.K_F4: 4,
-    pygame.K_F5: 5,
-    pygame.K_F6: 6,
+    keyboard.KeyCode.from_char('q'): 1,
+    keyboard.KeyCode.from_char('w'): 2,
+    keyboard.KeyCode.from_char('e'): 3,
+    keyboard.KeyCode.from_char('r'): 4,
+    keyboard.KeyCode.from_char('t'): 5,
+    keyboard.KeyCode.from_char('y'): 6,
 }
 
+# Mapping numbers to new hotkeys (Q, W, E, R, T, Y)
+key_labels = {
+    1: 'Q',
+    2: 'W',
+    3: 'E',
+    4: 'R',
+    5: 'T',
+    6: 'Y',
+}
+
+# Previews coordinates and size
+previews = {}
+
+# Draw preview images in a responsive grid
 def draw_preview():
+    global previews
     window.fill((50, 50, 50))
     
     preview_width = width // 3
@@ -66,57 +86,58 @@ def draw_preview():
         preview_resized = pygame.transform.scale(preview_images[i], (preview_width, preview_height))
         window.blit(preview_resized, (x, y))
 
+        # Draw labels dynamically based on preview position
         font = pygame.font.SysFont(None, 48)
-        label = font.render(f"F{i}", True, (0, 0, 0))
+        label = font.render(key_labels[i], True, (0, 0, 0))  # Use key_labels for correct text
         window.blit(label, (x + 10, y + 10))
 
+        # Store coordinates for mouse interaction
         previews[i] = (x, y, preview_width, preview_height)
 
+        # Highlight selected preview
+        if current_option == i:
+            pygame.draw.rect(window, (0, 255, 0), (x - 5, y - 5, preview_width + 10, preview_height + 10), 5)
+
+# Draw pattern image for the selected option
 def draw_patterns():
     window.fill((50, 50, 50))
     pattern_image = patterns[current_option][current_pattern]
     pattern_resized = pygame.transform.scale(pattern_image, (width, height))
     window.blit(pattern_resized, (0, 0))
 
-previews = {}
+# Key press handler to be used with pynput
+def on_press(key):
+    global current_option, current_pattern
+    if key in hotkeys and current_option is None:
+        current_option = hotkeys[key]
+        current_pattern = 0
+    elif key == keyboard.Key.delete:
+        current_option = None
+    elif key == keyboard.Key.space:
+        if current_option is not None:
+            current_pattern = (current_pattern + 1) % len(patterns[current_option])
+            if current_pattern == 0:
+                current_option = None
+    elif key == keyboard.Key.left:
+        if current_option is not None:
+            current_pattern = (current_pattern - 1) % len(patterns[current_option])
+            if current_pattern == len(patterns[current_option]) - 1:
+                current_option = None
+
+# Start the pynput listener
+listener = keyboard.Listener(on_press=on_press)
+listener.start()
 
 running = True
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        elif event.type == pygame.KEYDOWN:
-            if current_option is None:
-                if event.key in hotkeys:
-                    current_option = hotkeys[event.key]
-                    current_pattern = 0
-            else:
-                if event.key == pygame.K_DELETE:
-                    current_option = None
-                elif event.key == pygame.K_SPACE:
-                    current_pattern = (current_pattern + 1) % len(patterns[current_option])
-                    if current_pattern == 0:
-                        current_option = None
-                elif event.key == pygame.K_LEFT:
-                    current_pattern = (current_pattern - 1) % len(patterns[current_option])
-                    if current_pattern == len(patterns[current_option]) - 1:
-                        current_option = None
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            if current_option is None:
-                for option, (x, y, w, h) in previews.items():
-                    mouse_x, mouse_y = event.pos
-                    if x <= mouse_x <= x + w and y <= mouse_y <= y + h:
-                        current_option = option
-                        current_pattern = 0
-                if event.pos[0] < width // 3 and event.pos[1] < height // 2:
-                    current_pattern = (current_pattern + 1) % len(patterns[current_option])
-                    if current_pattern == 0:
-                        current_option = None
-
         elif event.type == pygame.VIDEORESIZE:
             width, height = event.w, event.h
             window = pygame.display.set_mode((width, height), pygame.RESIZABLE)
 
+    # Drawing functions based on current state
     if current_option is None:
         draw_preview()
     else:
