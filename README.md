@@ -7,6 +7,7 @@ How to use:<br />
 -Run Zulrah Helper.exe.<br />
 -Click on one of the 6 images or press the designated hotkey to select rotation.<br />
 -Press 'Space' to advance to the next image in the rotation.<br />
+-Press 'Left Arrow' to return to previous image in the rotation.<br />
 -Press 'Delete' to return to the rotation selection or the application will automatically return when you've reached the end of the rotation.<br /><br />
 Due to limitations with 'pygame', hotkeys cannot be used while the window is not focused. A workaround is to use the 'pynput' library.<br />
 To install pynput simply open a command prompt as admin, paste "**pip install pynput**" and press enter.<br />
